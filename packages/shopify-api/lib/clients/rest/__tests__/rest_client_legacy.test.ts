@@ -3,7 +3,7 @@ import {
   queueMockResponses,
 } from '../../../__tests__/test-helper';
 import {testConfig} from '../../../__tests__/test-config';
-import {DataType, HeaderParams} from '../../http_client/types';
+import {DataType, GetRequestParams} from '../../http_client/types';
 import {RestRequestReturn, PageInfo} from '../types';
 import * as ShopifyErrors from '../../../error';
 import {
@@ -15,7 +15,6 @@ import {
 import {Session} from '../../../session/session';
 import {JwtPayload} from '../../../session/types';
 import {shopifyApi} from '../../..';
-import {createRestClientFactory} from '../rest_client';
 
 const domain = 'test-shop.myshopify.io';
 const successResponse = {
@@ -57,12 +56,11 @@ describe('REST client', () => {
   it('can make GET request', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
 
     queueMockResponse(JSON.stringify(successResponse));
 
-    await expect(client.get('products')).resolves.toEqual(
+    await expect(client.get({path: 'products'})).resolves.toEqual(
       buildExpectedResponse(successResponse),
     );
     expect({
@@ -75,14 +73,19 @@ describe('REST client', () => {
   it('can make GET request with path in query', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
 
     queueMockResponse(JSON.stringify(successResponse));
+    const getRequest = {
+      path: 'products',
+      query: {
+        path: 'some_path',
+      },
+    };
 
-    await expect(
-      client.get('products', {query: {path: 'some_path'}}),
-    ).resolves.toEqual(buildExpectedResponse(successResponse));
+    await expect(client.get(getRequest)).resolves.toEqual(
+      buildExpectedResponse(successResponse),
+    );
     expect({
       method: 'GET',
       domain,
@@ -90,11 +93,10 @@ describe('REST client', () => {
     }).toMatchMadeHttpRequest();
   });
 
-  it('can make POST request', async () => {
+  it('can make POST request with JSON data', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
 
     queueMockResponse(JSON.stringify(successResponse));
 
@@ -103,9 +105,9 @@ describe('REST client', () => {
       amount: 10,
     };
 
-    await expect(client.post('products', {data: postData})).resolves.toEqual(
-      buildExpectedResponse(successResponse),
-    );
+    await expect(
+      client.post({path: 'products', type: DataType.JSON, data: postData}),
+    ).resolves.toEqual(buildExpectedResponse(successResponse));
 
     expect({
       method: 'POST',
@@ -116,11 +118,39 @@ describe('REST client', () => {
     }).toMatchMadeHttpRequest();
   });
 
-  it('can make PUT request', async () => {
+  it('can make POST request with form data', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
+
+    queueMockResponse(JSON.stringify(successResponse));
+
+    const postData = {
+      title: 'Test product + something else',
+      amount: 10,
+    };
+
+    await expect(
+      client.post({
+        path: 'products',
+        type: DataType.URLEncoded,
+        data: postData,
+      }),
+    ).resolves.toEqual(buildExpectedResponse(successResponse));
+
+    expect({
+      method: 'POST',
+      domain,
+      path: `/admin/api/${shopify.config.apiVersion}/products.json`,
+      headers: {'Content-Type': DataType.URLEncoded.toString()},
+      data: 'title=Test+product+%2B+something+else&amount=10',
+    }).toMatchMadeHttpRequest();
+  });
+
+  it('can make PUT request with JSON data', async () => {
+    const shopify = shopifyApi(testConfig());
+
+    const client = new shopify.clients.Rest({session});
 
     queueMockResponse(JSON.stringify(successResponse));
 
@@ -129,9 +159,9 @@ describe('REST client', () => {
       amount: 10,
     };
 
-    await expect(client.put('products/123', {data: putData})).resolves.toEqual(
-      buildExpectedResponse(successResponse),
-    );
+    await expect(
+      client.put({path: 'products/123', type: DataType.JSON, data: putData}),
+    ).resolves.toEqual(buildExpectedResponse(successResponse));
 
     expect({
       method: 'PUT',
@@ -145,12 +175,11 @@ describe('REST client', () => {
   it('can make DELETE request', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
 
     queueMockResponse(JSON.stringify(successResponse));
 
-    await expect(client.delete('products/123')).resolves.toEqual(
+    await expect(client.delete({path: 'products/123'})).resolves.toEqual(
       buildExpectedResponse(successResponse),
     );
 
@@ -164,35 +193,32 @@ describe('REST client', () => {
   it('merges custom headers with the default ones', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
 
-    const headers: HeaderParams = {
+    const customHeaders: {[key: string]: string} = {
       'X-Not-A-Real-Header': 'some_value',
     };
 
     queueMockResponse(JSON.stringify(successResponse));
 
-    await expect(client.get('products', {headers})).resolves.toEqual(
-      buildExpectedResponse(successResponse),
-    );
+    await expect(
+      client.get({path: 'products', extraHeaders: customHeaders}),
+    ).resolves.toEqual(buildExpectedResponse(successResponse));
 
-    headers[ShopifyHeader.AccessToken] = accessToken;
+    customHeaders[ShopifyHeader.AccessToken] = accessToken;
     expect({
       method: 'GET',
       domain,
       path: `/admin/api/${shopify.config.apiVersion}/products.json`,
-      headers,
+      headers: customHeaders,
     }).toMatchMadeHttpRequest();
   });
 
   it('includes pageInfo of type PageInfo in the returned object for calls with next or previous pages', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
-
     const params = getDefaultPageInfo(shopify.config.apiVersion);
+    const client = new shopify.clients.Rest({session});
     const linkHeaders = [
       `<${params.previousPageUrl}>; rel="previous"`,
       `<${params.nextPageUrl}>; rel="next"`,
@@ -204,7 +230,8 @@ describe('REST client', () => {
       {headers: {link: linkHeaders.join(', ')}},
     ]);
 
-    const response = (await client.get('products', {
+    const response = (await client.get({
+      path: 'products',
       query: {limit: 10},
     })) as RestRequestReturn;
 
@@ -215,10 +242,8 @@ describe('REST client', () => {
   it('is able to make subsequent get requests to either pageInfo.nextPage or pageInfo.prevPage', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
-
     const params = getDefaultPageInfo(shopify.config.apiVersion);
+    const client = new shopify.clients.Rest({session});
     const linkHeaders = [
       `<${params.previousPageUrl}>; rel="previous"`,
       `<${params.nextPageUrl}>; rel="next"`,
@@ -239,21 +264,20 @@ describe('REST client', () => {
       ],
     );
 
-    const initialResponse = (await client.get('products', {
+    const initialResponse = (await client.get({
+      path: 'products',
       query: {limit: 10},
     })) as RestRequestReturn;
 
     const pageInfo = initialResponse.pageInfo as PageInfo;
     const nextPageResponse = await client.get(
-      pageInfo.nextPage!.path,
-      pageInfo.nextPage,
+      pageInfo.nextPage as GetRequestParams,
     );
     expect(nextPageResponse).toBeDefined();
     expect(nextPageResponse).toHaveProperty('pageInfo');
 
     const prevPageResponse = await client.get(
-      pageInfo.prevPage!.path,
-      pageInfo.nextPage,
+      pageInfo.prevPage as GetRequestParams,
     );
     expect(prevPageResponse).toBeDefined();
     expect(prevPageResponse).toHaveProperty('pageInfo');
@@ -262,10 +286,8 @@ describe('REST client', () => {
   it('can request next pages until they run out', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
-
     const params = getDefaultPageInfo(shopify.config.apiVersion);
+    const client = new shopify.clients.Rest({session});
     const linkHeaders = [
       `<${params.previousPageUrl}>; rel="previous"`,
       `<${params.nextPageUrl}>; rel="next"`,
@@ -286,19 +308,18 @@ describe('REST client', () => {
       ],
     );
 
-    const initialResponse = await client.get('products', {
+    const initialResponse = (await client.get({
+      path: 'products',
       query: {limit: 10},
-    });
+    })) as RestRequestReturn;
     expect(initialResponse.pageInfo!.nextPageUrl).toBe(params.nextPageUrl);
-    const secondResponse = await client.get(
-      initialResponse.pageInfo!.nextPage!.path,
-      initialResponse.pageInfo!.nextPage,
-    );
+    const secondResponse = (await client.get(
+      initialResponse.pageInfo!.nextPage!,
+    )) as RestRequestReturn;
     expect(secondResponse.pageInfo!.nextPageUrl).toBe(params.nextPageUrl);
-    const thirdResponse = await client.get(
-      secondResponse.pageInfo!.nextPage!.path,
-      secondResponse.pageInfo!.nextPage,
-    );
+    const thirdResponse = (await client.get(
+      secondResponse.pageInfo!.nextPage!,
+    )) as RestRequestReturn;
     expect(thirdResponse.pageInfo!.nextPageUrl).toBeUndefined();
     expect(thirdResponse.pageInfo!.nextPage).toBeUndefined();
   });
@@ -306,10 +327,8 @@ describe('REST client', () => {
   it('can request previous pages until they run out', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
-
     const params = getDefaultPageInfo(shopify.config.apiVersion);
+    const client = new shopify.clients.Rest({session});
     const linkHeaders = [
       `<${params.previousPageUrl}>; rel="previous"`,
       `<${params.nextPageUrl}>; rel="next"`,
@@ -330,23 +349,22 @@ describe('REST client', () => {
       ],
     );
 
-    const initialResponse = await client.get('products', {
+    const initialResponse = (await client.get({
+      path: 'products',
       query: {limit: 10},
-    });
+    })) as RestRequestReturn;
     expect(initialResponse.pageInfo!.previousPageUrl).toBe(
       params.previousPageUrl,
     );
-    const secondResponse = await client.get(
-      initialResponse.pageInfo!.prevPage!.path,
-      initialResponse.pageInfo!.prevPage,
-    );
+    const secondResponse = (await client.get(
+      initialResponse.pageInfo!.prevPage!,
+    )) as RestRequestReturn;
     expect(secondResponse.pageInfo!.previousPageUrl).toBe(
       params.previousPageUrl,
     );
-    const thirdResponse = await client.get(
-      secondResponse.pageInfo!.prevPage!.path,
-      secondResponse.pageInfo!.prevPage,
-    );
+    const thirdResponse = (await client.get(
+      secondResponse.pageInfo!.prevPage!,
+    )) as RestRequestReturn;
     expect(thirdResponse.pageInfo!.previousPageUrl).toBeUndefined();
     expect(thirdResponse.pageInfo!.prevPage).toBeUndefined();
   });
@@ -359,12 +377,11 @@ describe('REST client', () => {
       }),
     );
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
 
     queueMockResponse(JSON.stringify(successResponse));
 
-    await expect(client.get('products')).resolves.toEqual(
+    await expect(client.get({path: 'products'})).resolves.toEqual(
       buildExpectedResponse(successResponse),
     );
 
@@ -390,22 +407,19 @@ describe('REST client', () => {
       isOnline: true,
     });
 
-    expect(() =>
-      createRestClientFactory({config: shopify.config})({
-        session: sessionWithoutAccessToken,
-      }),
+    expect(
+      () => new shopify.clients.Rest({session: sessionWithoutAccessToken}),
     ).toThrow(ShopifyErrors.MissingRequiredArgument);
   });
 
   it('allows paths with .json', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
 
     queueMockResponse(JSON.stringify(successResponse));
 
-    await expect(client.get('products.json')).resolves.toEqual(
+    await expect(client.get({path: 'products.json'})).resolves.toEqual(
       buildExpectedResponse(successResponse),
     );
     expect({
@@ -418,12 +432,11 @@ describe('REST client', () => {
   it('allows full paths', async () => {
     const shopify = shopifyApi(testConfig());
 
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({session});
+    const client = new shopify.clients.Rest({session});
 
     queueMockResponse(JSON.stringify(successResponse));
 
-    await expect(client.get('/admin/some-path.json')).resolves.toEqual(
+    await expect(client.get({path: '/admin/some-path.json'})).resolves.toEqual(
       buildExpectedResponse(successResponse),
     );
     expect({
@@ -437,16 +450,14 @@ describe('REST client', () => {
     const shopify = shopifyApi(testConfig());
 
     expect(shopify.config.apiVersion).not.toBe('2020-01');
-
-    // const client = new shopify.clients.Rest({session});
-    const client = createRestClientFactory({config: shopify.config})({
+    const client = new shopify.clients.Rest({
       session,
       apiVersion: '2020-01' as any as ApiVersion,
     });
 
     queueMockResponse(JSON.stringify(successResponse));
 
-    await expect(client.get('products')).resolves.toEqual(
+    await expect(client.get({path: 'products'})).resolves.toEqual(
       buildExpectedResponse(successResponse),
     );
     expect({

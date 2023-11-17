@@ -81,7 +81,7 @@ export class HttpClient {
     return this.request<T>({method: Method.Delete, ...params});
   }
 
-  protected async request<T = unknown>(
+  public async request<T = unknown>(
     params: RequestParams,
   ): Promise<RequestReturn<T>> {
     const maxTries = params.tries ? params.tries : 1;
