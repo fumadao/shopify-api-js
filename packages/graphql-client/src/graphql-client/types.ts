@@ -7,6 +7,8 @@ export type CustomFetchApi = (
   }
 ) => Promise<Response>;
 
+export type DataChunk = Buffer | Uint8Array;
+
 interface OperationVariables {
   [key: string]: any;
 }
@@ -26,9 +28,20 @@ export interface GQLExtensions {
 }
 
 export interface ClientResponse<TData = unknown> {
-  data?: TData;
+  data?: Partial<TData>;
   errors?: ResponseErrors;
   extensions?: GQLExtensions;
+}
+
+export interface ClientStreamResponseIteratorObject<TData = unknown>
+  extends ClientResponse<TData> {
+  hasNext: boolean;
+}
+
+export interface ClientStreamResponse<TData = unknown> {
+  [Symbol.asyncIterator](): AsyncIterator<
+    ClientStreamResponseIteratorObject<TData>
+  >;
 }
 
 export interface LogContent {
@@ -89,4 +102,7 @@ export interface GraphQLClient {
   request: <TData = unknown>(
     ...props: RequestParams
   ) => Promise<ClientResponse<TData>>;
+  requestStream: <TData = unknown>(
+    ...props: RequestParams
+  ) => Promise<ClientStreamResponse<TData>>;
 }
