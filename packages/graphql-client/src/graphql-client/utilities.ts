@@ -1,4 +1,8 @@
-import { MAX_RETRIES, MIN_RETRIES } from "./constants";
+import { CLIENT, MAX_RETRIES, MIN_RETRIES } from "./constants";
+
+export function formatErrorMessage(message: string) {
+  return message.startsWith(`${CLIENT}`) ? message : `${CLIENT}: ${message}`;
+}
 
 export function getErrorMessage(error: any) {
   return error instanceof Error ? error.message : JSON.stringify(error);

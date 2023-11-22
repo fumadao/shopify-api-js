@@ -1,8 +1,10 @@
 export const CLIENT = "GraphQL Client";
 export const MIN_RETRIES = 0;
 export const MAX_RETRIES = 3;
-export const GQL_API_ERROR = `${CLIENT}: An error occurred while fetching from the API. Review 'graphQLErrors' for details.`;
-export const UNEXPECTED_CONTENT_TYPE_ERROR = `${CLIENT}: Response returned unexpected Content-Type:`;
+export const GQL_API_ERROR =
+  "An error occurred while fetching from the API. Review 'graphQLErrors' for details.";
+export const UNEXPECTED_CONTENT_TYPE_ERROR =
+  "Response returned unexpected Content-Type:";
 
 export const CONTENT_TYPES = {
   json: "application/json",

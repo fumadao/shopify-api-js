@@ -6,7 +6,13 @@ import {
   RequestOptions,
   LogContentTypes,
   ClientOptions,
+  ClientStreamResponseIteratorObject,
 } from "../types";
+
+import {
+  createIterableResponse,
+  createReaderStreamResponse,
+} from "./testHelpers";
 
 export const globalFetchMock = JSON.stringify({ data: {} });
 
@@ -123,7 +129,7 @@ describe("GraphQL Client", () => {
           variables,
         });
 
-        expect(fetch).toHaveBeenCalledWith(config.url, {
+        expect(fetchMock).toHaveBeenCalledWith(config.url, {
           method: "POST",
           headers: config.headers,
           body: JSON.stringify({
@@ -160,7 +166,7 @@ describe("GraphQL Client", () => {
             variables,
           }),
         });
-        expect(fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
       });
 
       describe("calling the function", () => {
@@ -199,7 +205,7 @@ describe("GraphQL Client", () => {
         describe("fetch parameters", () => {
           it("calls fetch API with provided operation", async () => {
             await client.fetch(operation);
-            expect(fetch).toHaveBeenCalledWith(config.url, {
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
               method: "POST",
               headers: config.headers,
               body: JSON.stringify({
@@ -210,7 +216,7 @@ describe("GraphQL Client", () => {
 
           it("calls fetch API with provided variables", async () => {
             await client.fetch(operation, { variables });
-            expect(fetch).toHaveBeenCalledWith(config.url, {
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
               method: "POST",
               headers: config.headers,
               body: JSON.stringify({
@@ -224,7 +230,7 @@ describe("GraphQL Client", () => {
             const url =
               "http://test-store.myshopify.com/api/2023-07/graphql.json";
             await client.fetch(operation, { url });
-            expect(fetch).toHaveBeenCalledWith(url, {
+            expect(fetchMock).toHaveBeenCalledWith(url, {
               method: "POST",
               headers: config.headers,
               body: JSON.stringify({
@@ -240,7 +246,7 @@ describe("GraphQL Client", () => {
             };
 
             await client.fetch(operation, { headers });
-            expect(fetch).toHaveBeenCalledWith(config.url, {
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
               method: "POST",
               headers: { ...config.headers, ...headers },
               body: JSON.stringify({
@@ -258,7 +264,7 @@ describe("GraphQL Client", () => {
               await expect(async () => {
                 await client.fetch(operation);
               }).rejects.toThrow(new RegExp(/^GraphQL Client: /));
-              expect(fetch).toHaveBeenCalledTimes(1);
+              expect(fetchMock).toHaveBeenCalledTimes(1);
             });
 
             it("calls the global fetch 2 times and throws a retry error when the client was initialized with 1 retries and all fetches were aborted", async () => {
@@ -273,7 +279,7 @@ describe("GraphQL Client", () => {
                   /^GraphQL Client: Attempted maximum number of 1 network retries. Last message - /
                 )
               );
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("calls the global fetch 3 times and throws a retry error when the function is provided with 2 retries and all fetches were aborted", async () => {
@@ -287,7 +293,7 @@ describe("GraphQL Client", () => {
                 )
               );
 
-              expect(fetch).toHaveBeenCalledTimes(3);
+              expect(fetchMock).toHaveBeenCalledTimes(3);
             });
 
             it("returns a valid http response after an aborted fetch and the next response is valid", async () => {
@@ -296,7 +302,7 @@ describe("GraphQL Client", () => {
               const response = await client.fetch(operation, { retries: 2 });
 
               expect(response.status).toBe(200);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("delays a retry by 1000ms", async () => {
@@ -368,7 +374,7 @@ describe("GraphQL Client", () => {
               const response = await client.fetch(operation);
 
               expect(response.status).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(1);
+              expect(fetchMock).toHaveBeenCalledTimes(1);
             });
 
             it("calls the global fetch 2 times and returns the failed http response when the client was initialized with 1 retries and all fetches returned 429 responses", async () => {
@@ -378,7 +384,7 @@ describe("GraphQL Client", () => {
               const response = await client.fetch(operation);
 
               expect(response.status).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("calls the global fetch 3 times and returns the failed http response when the function is provided with 2 retries and all fetches returned 429 responses", async () => {
@@ -386,7 +392,7 @@ describe("GraphQL Client", () => {
               const response = await client.fetch(operation, { retries: 2 });
 
               expect(response.status).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(3);
+              expect(fetchMock).toHaveBeenCalledTimes(3);
             });
 
             it("returns a valid response after an a failed 429 fetch response and the next response is valid", async () => {
@@ -400,7 +406,7 @@ describe("GraphQL Client", () => {
 
               expect(response.status).toBe(200);
               expect(await response.json()).toEqual(mockedSuccessData);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("returns a failed non 429/503 response after an a failed 429 fetch response and the next response has failed", async () => {
@@ -414,7 +420,7 @@ describe("GraphQL Client", () => {
 
               expect(response.status).toBe(500);
               expect(await response.json()).toEqual(mockedSuccessData);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("delays a retry by 1000ms", async () => {
@@ -480,7 +486,7 @@ describe("GraphQL Client", () => {
               const response = await client.fetch(operation);
 
               expect(response.status).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(1);
+              expect(fetchMock).toHaveBeenCalledTimes(1);
             });
 
             it("calls the global fetch 2 times and returns the failed http response when the client was initialized with 1 retries and all fetch responses were 503 ", async () => {
@@ -490,7 +496,7 @@ describe("GraphQL Client", () => {
               const response = await client.fetch(operation);
 
               expect(response.status).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("calls the global fetch 3 times and returns the failed http response when the function is provided with 2 retries and all fetch responses were 503", async () => {
@@ -498,7 +504,7 @@ describe("GraphQL Client", () => {
               const response = await client.fetch(operation, { retries: 2 });
 
               expect(response.status).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(3);
+              expect(fetchMock).toHaveBeenCalledTimes(3);
             });
 
             it("returns a valid response after a failed 503 fetch response and the next response is valid", async () => {
@@ -512,7 +518,7 @@ describe("GraphQL Client", () => {
 
               expect(response.status).toBe(200);
               expect(await response.json()).toEqual(mockedSuccessData);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("returns a failed non 429/503 response after a failed 503 fetch response and the next response has failed", async () => {
@@ -526,7 +532,7 @@ describe("GraphQL Client", () => {
 
               expect(response.status).toBe(500);
               expect(await response.json()).toEqual(mockedSuccessData);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("delays a retry by 1000ms", async () => {
@@ -593,7 +599,7 @@ describe("GraphQL Client", () => {
             const response = await client.fetch(operation);
 
             expect(response.status).toBe(200);
-            expect(fetch).toHaveBeenCalledTimes(1);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
           });
 
           it("does not retry additional network requests on a failed response that is not a 429 or 503", async () => {
@@ -611,7 +617,7 @@ describe("GraphQL Client", () => {
             const response = await client.fetch(operation);
 
             expect(response.status).toBe(500);
-            expect(fetch).toHaveBeenCalledTimes(1);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
           });
 
           it("throws an error when the retries config value is less than 0", async () => {
@@ -643,7 +649,7 @@ describe("GraphQL Client", () => {
           variables,
         });
 
-        expect(fetch).toHaveBeenCalledWith(config.url, {
+        expect(fetchMock).toHaveBeenCalledWith(config.url, {
           method: "POST",
           headers: config.headers,
           body: JSON.stringify({
@@ -680,7 +686,7 @@ describe("GraphQL Client", () => {
             variables,
           }),
         });
-        expect(fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
       });
 
       describe("calling the function", () => {
@@ -693,7 +699,7 @@ describe("GraphQL Client", () => {
         describe("fetch parameters", () => {
           it("calls fetch API with provided operation", async () => {
             await client.request(operation);
-            expect(fetch).toHaveBeenCalledWith(config.url, {
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
               method: "POST",
               headers: config.headers,
               body: JSON.stringify({
@@ -704,7 +710,7 @@ describe("GraphQL Client", () => {
 
           it("calls fetch API with provided variables", async () => {
             await client.request(operation, { variables });
-            expect(fetch).toHaveBeenCalledWith(config.url, {
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
               method: "POST",
               headers: config.headers,
               body: JSON.stringify({
@@ -718,7 +724,7 @@ describe("GraphQL Client", () => {
             const url =
               "http://test-store.myshopify.com/api/2023-07/graphql.json";
             await client.request(operation, { url });
-            expect(fetch).toHaveBeenCalledWith(url, {
+            expect(fetchMock).toHaveBeenCalledWith(url, {
               method: "POST",
               headers: config.headers,
               body: JSON.stringify({
@@ -734,7 +740,7 @@ describe("GraphQL Client", () => {
             };
 
             await client.request(operation, { headers });
-            expect(fetch).toHaveBeenCalledWith(config.url, {
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
               method: "POST",
               headers: { ...config.headers, ...headers },
               body: JSON.stringify({
@@ -805,7 +811,7 @@ describe("GraphQL Client", () => {
             const response = await client.request(operation, { variables });
             expect(response).toHaveProperty("errors", {
               networkStatusCode: responseConfig.status,
-              message: responseConfig.statusText,
+              message: `GraphQL Client: ${responseConfig.statusText}`,
             });
           });
 
@@ -929,7 +935,7 @@ describe("GraphQL Client", () => {
               expect(errors?.message?.startsWith("GraphQL Client: ")).toBe(
                 true
               );
-              expect(fetch).toHaveBeenCalledTimes(1);
+              expect(fetchMock).toHaveBeenCalledTimes(1);
             });
 
             it("calls the global fetch 2 times and returns a response object with an error when the client was initialized with 1 retries and all fetches were aborted", async () => {
@@ -944,7 +950,7 @@ describe("GraphQL Client", () => {
                   "GraphQL Client: Attempted maximum number of 1 network retries. Last message - "
                 )
               ).toBe(true);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("calls the global fetch 3 times and returns a response object with an error when the function is provided with 2 retries and all fetches were aborted", async () => {
@@ -959,7 +965,7 @@ describe("GraphQL Client", () => {
                   "GraphQL Client: Attempted maximum number of 2 network retries. Last message - "
                 )
               ).toBe(true);
-              expect(fetch).toHaveBeenCalledTimes(3);
+              expect(fetchMock).toHaveBeenCalledTimes(3);
             });
 
             it("returns a valid response object without an error property after an aborted fetch and the next response is valid", async () => {
@@ -983,7 +989,7 @@ describe("GraphQL Client", () => {
 
               expect(response.errors).toBeUndefined();
               expect(response.data).toEqual(mockResponseData.data);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("delays a retry by 1000ms", async () => {
@@ -1050,9 +1056,11 @@ describe("GraphQL Client", () => {
               fetchMock.mockResolvedValue(mockedFailedResponse);
               const response = await client.request(operation);
 
-              expect(response.errors?.message).toBe("Too Many Requests");
+              expect(response.errors?.message).toBe(
+                "GraphQL Client: Too Many Requests"
+              );
               expect(response.errors?.networkStatusCode).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(1);
+              expect(fetchMock).toHaveBeenCalledTimes(1);
             });
 
             it("calls the global fetch 2 times and returns a response object with an error when the client was initialized with 1 retries and all fetches returned 429 responses", async () => {
@@ -1061,18 +1069,22 @@ describe("GraphQL Client", () => {
 
               const response = await client.request(operation);
 
-              expect(response.errors?.message).toBe("Too Many Requests");
+              expect(response.errors?.message).toBe(
+                "GraphQL Client: Too Many Requests"
+              );
               expect(response.errors?.networkStatusCode).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("calls the global fetch 3 times and returns a response object with an error when the function is provided with 2 retries and all fetches returned 429 responses", async () => {
               fetchMock.mockResolvedValue(mockedFailedResponse);
               const response = await client.request(operation, { retries: 2 });
 
-              expect(response.errors?.message).toBe("Too Many Requests");
+              expect(response.errors?.message).toBe(
+                "GraphQL Client: Too Many Requests"
+              );
               expect(response.errors?.networkStatusCode).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(3);
+              expect(fetchMock).toHaveBeenCalledTimes(3);
             });
 
             it("returns a valid response after an a failed 429 fetch response and the next response is valid", async () => {
@@ -1091,7 +1103,7 @@ describe("GraphQL Client", () => {
               const response = await client.request(operation, { retries: 2 });
 
               expect(response.data).toEqual(mockedSuccessData.data);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("returns a failed non 429/503 response after an a failed 429 fetch response and the next response has failed", async () => {
@@ -1100,8 +1112,10 @@ describe("GraphQL Client", () => {
               const response = await client.request(operation, { retries: 2 });
 
               expect(response.errors?.networkStatusCode).toBe(500);
-              expect(response.errors?.message).toEqual("Internal Server Error");
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(response.errors?.message).toEqual(
+                "GraphQL Client: Internal Server Error"
+              );
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("delays a retry by 1000ms", async () => {
@@ -1166,9 +1180,11 @@ describe("GraphQL Client", () => {
               fetchMock.mockResolvedValue(mockedFailedResponse);
               const response = await client.request(operation);
 
-              expect(response.errors?.message).toBe("Service Unavailable");
+              expect(response.errors?.message).toBe(
+                "GraphQL Client: Service Unavailable"
+              );
               expect(response.errors?.networkStatusCode).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(1);
+              expect(fetchMock).toHaveBeenCalledTimes(1);
             });
 
             it("calls the global fetch 2 times and returns a response object with an error when the client was initialized with 1 retries and all fetches returned 503 responses", async () => {
@@ -1177,18 +1193,22 @@ describe("GraphQL Client", () => {
 
               const response = await client.request(operation);
 
-              expect(response.errors?.message).toBe("Service Unavailable");
+              expect(response.errors?.message).toBe(
+                "GraphQL Client: Service Unavailable"
+              );
               expect(response.errors?.networkStatusCode).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("calls the global fetch 3 times and returns a response object with an error when the function is provided with 2 retries and all fetches returned 503 responses", async () => {
               fetchMock.mockResolvedValue(mockedFailedResponse);
               const response = await client.request(operation, { retries: 2 });
 
-              expect(response.errors?.message).toBe("Service Unavailable");
+              expect(response.errors?.message).toBe(
+                "GraphQL Client: Service Unavailable"
+              );
               expect(response.errors?.networkStatusCode).toBe(status);
-              expect(fetch).toHaveBeenCalledTimes(3);
+              expect(fetchMock).toHaveBeenCalledTimes(3);
             });
 
             it("returns a valid response after an a failed 503 fetch response and the next response is valid", async () => {
@@ -1207,7 +1227,7 @@ describe("GraphQL Client", () => {
               const response = await client.request(operation, { retries: 2 });
 
               expect(response.data).toEqual(mockedSuccessData.data);
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("returns a failed non 429/503 response after an a failed 503 fetch response and the next response has failed", async () => {
@@ -1216,8 +1236,10 @@ describe("GraphQL Client", () => {
               const response = await client.request(operation, { retries: 2 });
 
               expect(response.errors?.networkStatusCode).toBe(500);
-              expect(response.errors?.message).toEqual("Internal Server Error");
-              expect(fetch).toHaveBeenCalledTimes(2);
+              expect(response.errors?.message).toEqual(
+                "GraphQL Client: Internal Server Error"
+              );
+              expect(fetchMock).toHaveBeenCalledTimes(2);
             });
 
             it("delays a retry by 1000ms", async () => {
@@ -1285,7 +1307,7 @@ describe("GraphQL Client", () => {
             const response = await client.request(operation);
 
             expect(response.data).toEqual(mockedSuccessData.data);
-            expect(fetch).toHaveBeenCalledTimes(1);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
           });
 
           it("does not retry additional network requests on a failed response that is not a 429 or 503", async () => {
@@ -1303,7 +1325,7 @@ describe("GraphQL Client", () => {
             const response = await client.request(operation);
 
             expect(response.errors?.networkStatusCode).toBe(500);
-            expect(fetch).toHaveBeenCalledTimes(1);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
           });
 
           it("returns a response object with an error when the retries config value is less than 0", async () => {
@@ -1358,6 +1380,1058 @@ describe("GraphQL Client", () => {
               ],
             },
           });
+        });
+
+        it("throws an error when the operation includes a @defer directive", async () => {
+          const customOperation = `
+          query {
+            shop {
+              id
+              ... @defer {
+                name
+              }
+            }
+          }
+        `;
+
+          await expect(() => client.request(customOperation)).rejects.toThrow(
+            new Error(
+              "GraphQL Client: This operation will result in a streamable response - use requestStream() instead."
+            )
+          );
+        });
+      });
+    });
+
+    describe("requestStream()", () => {
+      const operation = `
+        query {
+          shop {
+            ... @defer {
+              name
+            }
+            id
+          }
+        }
+      `;
+
+      const variables = {
+        language: "EN",
+        country: "JP",
+      };
+
+      it("uses the global fetch when a custom fetch API is not provided at initialization", () => {
+        const client = getValidClient();
+
+        client.requestStream(operation, {
+          variables,
+        });
+
+        expect(fetchMock).toHaveBeenCalledWith(config.url, {
+          method: "POST",
+          headers: config.headers,
+          body: JSON.stringify({
+            query: operation,
+            variables,
+          }),
+        });
+      });
+
+      it("uses the provided custom fetch when a custom fetch API is provided at initialization", () => {
+        const customFetchApi = jest
+          .fn()
+          .mockResolvedValue(new Response(JSON.stringify({ data: {} }))) as any;
+
+        const client = createGraphQLClient({
+          ...config,
+          fetchApi: customFetchApi,
+        });
+
+        const props: [string, RequestOptions] = [
+          operation,
+          {
+            variables,
+          },
+        ];
+
+        client.requestStream(...props);
+
+        expect(customFetchApi).toHaveBeenCalledWith(config.url, {
+          method: "POST",
+          headers: config.headers,
+          body: JSON.stringify({
+            query: operation,
+            variables,
+          }),
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+
+      describe("calling the function", () => {
+        let client: GraphQLClient;
+
+        beforeEach(() => {
+          client = getValidClient();
+        });
+
+        describe("fetch parameters", () => {
+          it("calls fetch API with provided operation", async () => {
+            await client.requestStream(operation);
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
+              method: "POST",
+              headers: config.headers,
+              body: JSON.stringify({
+                query: operation,
+              }),
+            });
+          });
+
+          it("calls fetch API with provided variables", async () => {
+            await client.requestStream(operation, { variables });
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
+              method: "POST",
+              headers: config.headers,
+              body: JSON.stringify({
+                query: operation,
+                variables,
+              }),
+            });
+          });
+
+          it("calls fetch API with provided url override", async () => {
+            const url =
+              "http://test-store.myshopify.com/api/2023-07/graphql.json";
+            await client.requestStream(operation, { url });
+            expect(fetchMock).toHaveBeenCalledWith(url, {
+              method: "POST",
+              headers: config.headers,
+              body: JSON.stringify({
+                query: operation,
+              }),
+            });
+          });
+
+          it("calls fetch API with provided headers override", async () => {
+            const headers = {
+              "Content-Type": "application/graphql",
+              "custom-header": "custom-headers",
+            };
+
+            await client.requestStream(operation, { headers });
+            expect(fetchMock).toHaveBeenCalledWith(config.url, {
+              method: "POST",
+              headers: { ...config.headers, ...headers },
+              body: JSON.stringify({
+                query: operation,
+              }),
+            });
+          });
+        });
+
+        describe("returned object", () => {
+          it("returns an async iterator that returns an object that includes an error object if the response is not ok", async () => {
+            const responseConfig = {
+              status: 400,
+              statusText: "Bad request",
+              ok: false,
+              headers: new Headers({
+                "Content-Type": "application/json",
+              }),
+              json: jest.fn(),
+            };
+
+            const mockedFailedResponse = new Response("", responseConfig);
+
+            fetchMock.mockResolvedValue(mockedFailedResponse);
+
+            const responseStream = await client.requestStream(operation, {
+              variables,
+            });
+
+            for await (const response of responseStream) {
+              expect(response).toHaveProperty("error", {
+                networkStatusCode: responseConfig.status,
+                message: `GraphQL Client: ${responseConfig.statusText}`,
+              });
+            }
+          });
+
+          it("returns an async iterator that returns an object that includes an error object if the fetch promise fails", async () => {
+            const errorMessage = "Async error message";
+
+            fetchMock.mockRejectedValue(new Error(errorMessage));
+
+            const responseStream = await client.requestStream(operation, {
+              variables,
+            });
+
+            for await (const response of responseStream) {
+              expect(response).toHaveProperty("error", {
+                message: `GraphQL Client: ${errorMessage}`,
+              });
+            }
+          });
+
+          describe("response is unexpected Content-Type", () => {
+            it("returns an async iterator that returns an object with an error object if the content type is not JSON or Multipart", async () => {
+              const contentType = "text/html";
+
+              const responseConfig = {
+                status: 200,
+                ok: true,
+                headers: new Headers({
+                  "Content-Type": contentType,
+                }),
+                json: jest.fn(),
+              };
+
+              const mockedSuccessResponse = new Response("", responseConfig);
+
+              fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+              const responseStream = await client.requestStream(operation, {
+                variables,
+              });
+
+              for await (const response of responseStream) {
+                expect(response).toHaveProperty("error", {
+                  networkStatusCode: mockedSuccessResponse.status,
+                  message: `GraphQL Client: Response returned unexpected Content-Type: ${contentType}`,
+                });
+              }
+            });
+          });
+
+          describe("response is Content-Type: application/json", () => {
+            const headers = new Headers({
+              "Content-Type": "application/json",
+            });
+
+            it("returns an async iterator that returns an object that includes the response data object", async () => {
+              const mockResponseData = {
+                data: { shop: { name: "Test shop" } },
+              };
+
+              const responseConfig = {
+                status: 200,
+                ok: true,
+                headers,
+              };
+
+              const mockedSuccessResponse = new Response(
+                JSON.stringify(mockResponseData),
+                responseConfig
+              );
+
+              fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+              const responseStream = await client.requestStream(operation, {
+                variables,
+              });
+
+              for await (const response of responseStream) {
+                expect(response).toHaveProperty("data", mockResponseData.data);
+              }
+            });
+
+            it("returns an async iterator that returns an object that includes the response extensions object", async () => {
+              const extensions = {
+                context: {
+                  country: "JP",
+                  language: "ja",
+                },
+              };
+
+              const responseConfig = {
+                status: 200,
+                ok: true,
+                headers,
+              };
+
+              const mockedSuccessResponse = new Response(
+                JSON.stringify({ data: {}, extensions }),
+                responseConfig
+              );
+
+              fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+              const responseStream = await client.requestStream(operation, {
+                variables,
+              });
+
+              for await (const response of responseStream) {
+                expect(response).toHaveProperty("extensions", extensions);
+              }
+            });
+
+            it('returns an async iterator that returns an object that includes a "hasNext: false" field', async () => {
+              const responseConfig = {
+                status: 200,
+                ok: true,
+                headers,
+              };
+
+              const mockedSuccessResponse = new Response(
+                JSON.stringify({ data: {} }),
+                responseConfig
+              );
+
+              fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+              const responseStream = await client.requestStream(operation, {
+                variables,
+              });
+              for await (const response of responseStream) {
+                expect(response).toHaveProperty("hasNext", false);
+              }
+            });
+
+            it("returns an async iterator that returns an object that includes an error object if the API response contains errors", async () => {
+              const gqlError = ["GQL error"];
+
+              const responseConfig = {
+                status: 200,
+                ok: true,
+                headers,
+              };
+
+              const mockedSuccessResponse = new Response(
+                JSON.stringify({ errors: gqlError }),
+                responseConfig
+              );
+
+              fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+              const responseStream = await client.requestStream(operation, {
+                variables,
+              });
+
+              for await (const response of responseStream) {
+                expect(response).toHaveProperty("errors", {
+                  networkStatusCode: responseConfig.status,
+                  message:
+                    "GraphQL Client: An error occurred while fetching from the API. Review 'graphQLErrors' for details.",
+                  graphQLErrors: gqlError,
+                });
+              }
+            });
+
+            it("returns an async iterator that returns an object that includes an error object if the API does not throw or return an error and does not include a data object in its response", async () => {
+              const responseConfig = {
+                status: 200,
+                ok: true,
+                headers,
+              };
+
+              const mockedSuccessResponse = new Response(
+                JSON.stringify({}),
+                responseConfig
+              );
+
+              fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+              const responseStream = await client.requestStream(operation, {
+                variables,
+              });
+
+              for await (const response of responseStream) {
+                expect(response).toHaveProperty("errors", {
+                  networkStatusCode: mockedSuccessResponse.status,
+                  message:
+                    "GraphQL Client: An unknown error has occurred. The API did not return a data object or any errors in its response.",
+                });
+              }
+            });
+          });
+
+          describe("response is Content-Type: multipart/mixed", () => {
+            const id = "gid://shopify/Shop/1";
+            const name = "Shop 1";
+            const description = "Test shop description";
+
+            describe.each([
+              ["Readable Stream", createReaderStreamResponse],
+              ["Async Iterator", createIterableResponse],
+            ])("Server responded with a %s", (_name, responseGenerator) => {
+              describe("stream multiple, complete data chunk", () => {
+                const multipleResponsesArray = [
+                  `
+                  --graphql
+                  Content-Type: application/json
+                  Content-Length: 120\r\n\r\n{"data":{"shop":{"id":"${id}"}},"extensions":{"context": {"country": "${variables.country}", "language": "${variables.language}"}},"hasNext":true}
+                  --graphql
+
+                  `,
+                  `
+                  Content-Type: application/json
+                  Content-Length: 77\r\n\r\n{"path":["shop"],"data":{"name":"${name}","description":"${description}"},"hasNext":false,"errors":[]}
+
+                  --graphql--`,
+                ];
+
+                let results: any;
+                let responseStream: any;
+
+                beforeAll(async () => {
+                  const mockedSuccessResponse = responseGenerator(
+                    multipleResponsesArray
+                  );
+
+                  fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                  responseStream = await client.requestStream(operation, {
+                    variables,
+                  });
+
+                  results = [];
+
+                  for await (const response of responseStream) {
+                    results.push(response);
+                  }
+                });
+
+                afterAll(() => {
+                  jest.resetAllMocks();
+                });
+
+                it("returns an async iterator and the iterator returned 2 response objects", () => {
+                  expect(responseStream[Symbol.asyncIterator]).toBeDefined();
+                  expect(results.length).toBe(2);
+                });
+
+                describe("response objects returned by iterator", () => {
+                  let response: ClientStreamResponseIteratorObject;
+
+                  describe("Initial response object", () => {
+                    beforeAll(() => {
+                      response = results[0];
+                    });
+
+                    it("contains a data object that is the first chunk of data", () => {
+                      expect(response.data).toEqual({
+                        shop: {
+                          id,
+                        },
+                      });
+                    });
+
+                    it("contains the extensions object", () => {
+                      expect(response.extensions).toEqual({
+                        context: {
+                          language: variables.language,
+                          country: variables.country,
+                        },
+                      });
+                    });
+
+                    it("contains a true hasNext flag", () => {
+                      expect(response.hasNext).toBe(true);
+                    });
+                  });
+
+                  describe("last response object", () => {
+                    beforeAll(() => {
+                      response = results[1];
+                    });
+
+                    it("contains a data object that is a combination of all the data chunks", () => {
+                      expect(response.data).toEqual({
+                        shop: {
+                          id,
+                          name,
+                          description,
+                        },
+                      });
+                    });
+
+                    it("contains the extensions object", () => {
+                      expect(response.extensions).toEqual({
+                        context: {
+                          language: variables.language,
+                          country: variables.country,
+                        },
+                      });
+                    });
+
+                    it("contains a false hasNext flag", () => {
+                      expect(response.hasNext).toBe(false);
+                    });
+                  });
+                });
+              });
+
+              describe("stream multiple, incomplete data chunk", () => {
+                const multipleResponsesArray = [
+                  `
+                    --graphql
+                    Content-Type: app`,
+                  `lication/json
+                    Content-Length: 120\r\n\r\n{"data":{"shop":{"id":"`,
+                  `${id}"}},"exte`,
+                  `nsions":{"context":{"country":"`,
+                  `${variables.country}","language":"${variables.language}"}},"hasNext":true}
+                    --graphql
+
+                    `,
+                  `
+                    Content-Type: appli`,
+                  `cation/json
+                    Content-Length: 77\r\n`,
+                  `\r\n{"path":["shop"],"data":{"name":"${name}","descripti`,
+                  `on":"${description}"},"hasNext":false,"errors":[]}
+
+                    --graphql--`,
+                ];
+
+                let results: any;
+                let responseStream: any;
+
+                beforeAll(async () => {
+                  const mockedSuccessResponse = responseGenerator(
+                    multipleResponsesArray
+                  );
+
+                  fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                  responseStream = await client.requestStream(operation, {
+                    variables,
+                  });
+
+                  results = [];
+
+                  for await (const response of responseStream) {
+                    results.push(response);
+                  }
+                });
+
+                afterAll(() => {
+                  jest.resetAllMocks();
+                });
+
+                it("returns an async iterator and the iterator returned 2 response objects", () => {
+                  expect(responseStream[Symbol.asyncIterator]).toBeDefined();
+                  expect(results.length).toBe(2);
+                });
+
+                describe("response objects returned by iterator", () => {
+                  let response: ClientStreamResponseIteratorObject;
+
+                  describe("Initial response object", () => {
+                    beforeAll(() => {
+                      response = results[0];
+                    });
+
+                    it("contains a data object that is the first chunk of data", () => {
+                      expect(response.data).toEqual({
+                        shop: {
+                          id,
+                        },
+                      });
+                    });
+
+                    it("contains the extensions object", () => {
+                      expect(response.extensions).toEqual({
+                        context: {
+                          language: variables.language,
+                          country: variables.country,
+                        },
+                      });
+                    });
+
+                    it("contains a true hasNext flag", () => {
+                      expect(response.hasNext).toBe(true);
+                    });
+                  });
+
+                  describe("last response object", () => {
+                    beforeAll(() => {
+                      response = results[1];
+                    });
+
+                    it("contains a data object that is a combination of all the data chunks", () => {
+                      expect(response.data).toEqual({
+                        shop: {
+                          id,
+                          name,
+                          description,
+                        },
+                      });
+                    });
+
+                    it("contains the extensions object", () => {
+                      expect(response.extensions).toEqual({
+                        context: {
+                          language: variables.language,
+                          country: variables.country,
+                        },
+                      });
+                    });
+
+                    it("contains a false hasNext flag", () => {
+                      expect(response.hasNext).toBe(false);
+                    });
+                  });
+                });
+              });
+
+              describe("stream multiple, incomplete data chunk", () => {
+                const multipleResponsesArray = [
+                  `
+                    --graphql
+                    Content-Type: app`,
+                  `lication/json
+                    Content-Length: 120\r\n\r\n{"data":{"shop":{"id":"`,
+                  `${id}"}},"exte`,
+                  `nsions":{"context":{"country":"`,
+                  `${variables.country}","language":"${variables.language}"}},"hasNext":true}
+                    --graphql
+
+                    `,
+                  `
+                    Content-Type: appli`,
+                  `cation/json
+                    Content-Length: 77\r\n`,
+                  `\r\n{"path":["shop"],"data":{"name":"${name}","descripti`,
+                  `on":"${description}"},"hasNext":false,"errors":[]}
+
+                    --graphql--`,
+                ];
+
+                let results: any;
+                let responseStream: any;
+
+                beforeAll(async () => {
+                  const mockedSuccessResponse = responseGenerator(
+                    multipleResponsesArray
+                  );
+
+                  fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                  responseStream = await client.requestStream(operation, {
+                    variables,
+                  });
+
+                  results = [];
+
+                  for await (const response of responseStream) {
+                    results.push(response);
+                  }
+                });
+
+                afterAll(() => {
+                  jest.resetAllMocks();
+                });
+
+                it("returns an async iterator and the iterator returned 2 response objects", () => {
+                  expect(responseStream[Symbol.asyncIterator]).toBeDefined();
+                  expect(results.length).toBe(2);
+                });
+
+                describe("response objects returned by iterator", () => {
+                  let response: ClientStreamResponseIteratorObject;
+
+                  describe("Initial response object", () => {
+                    beforeAll(() => {
+                      response = results[0];
+                    });
+
+                    it("contains a data object that is the first chunk of data", () => {
+                      expect(response.data).toEqual({
+                        shop: {
+                          id,
+                        },
+                      });
+                    });
+
+                    it("contains the extensions object", () => {
+                      expect(response.extensions).toEqual({
+                        context: {
+                          language: variables.language,
+                          country: variables.country,
+                        },
+                      });
+                    });
+
+                    it("contains a true hasNext flag", () => {
+                      expect(response.hasNext).toBe(true);
+                    });
+                  });
+
+                  describe("last response object", () => {
+                    beforeAll(() => {
+                      response = results[1];
+                    });
+
+                    it("contains a data object that is a combination of all the data chunks", () => {
+                      expect(response.data).toEqual({
+                        shop: {
+                          id,
+                          name,
+                          description,
+                        },
+                      });
+                    });
+
+                    it("contains the extensions object", () => {
+                      expect(response.extensions).toEqual({
+                        context: {
+                          language: variables.language,
+                          country: variables.country,
+                        },
+                      });
+                    });
+
+                    it("contains a false hasNext flag", () => {
+                      expect(response.hasNext).toBe(false);
+                    });
+                  });
+                });
+              });
+
+              describe("stream a single completed data chunk", () => {
+                const multipleResponsesArray = [
+                  `
+                    --graphql
+                    Content-Type: application/json
+                    Content-Length: 120\r\n\r\n{"data":{"shop":{"id":"${id}"}},"extensions":{"context":{"country":"${variables.country}","language":"${variables.language}"}},"hasNext":true}
+                    --graphql
+
+                    Content-Type: application/json
+                    Content-Length: 77\r\n\r\n{"path":["shop"],"data":{"name":"${name}","description":"${description}"},"hasNext":false, "errors":[]}
+
+                    --graphql--`,
+                ];
+
+                let results: any;
+                let responseStream: any;
+
+                beforeAll(async () => {
+                  const mockedSuccessResponse = responseGenerator(
+                    multipleResponsesArray
+                  );
+
+                  fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                  responseStream = await client.requestStream(operation, {
+                    variables,
+                  });
+
+                  results = [];
+
+                  for await (const response of responseStream) {
+                    results.push(response);
+                  }
+                });
+
+                afterAll(() => {
+                  jest.resetAllMocks();
+                });
+
+                it("returns an async iterator and the iterator returned 1 response object", () => {
+                  expect(responseStream[Symbol.asyncIterator]).toBeDefined();
+                  expect(results.length).toBe(1);
+                });
+
+                describe("response object returned by iterator", () => {
+                  let response: ClientStreamResponseIteratorObject;
+
+                  beforeAll(() => {
+                    response = results[0];
+                  });
+
+                  it("contains a data object that is the first chunk of data", () => {
+                    expect(response.data).toEqual({
+                      shop: {
+                        id,
+                        name,
+                        description,
+                      },
+                    });
+                  });
+
+                  it("contains the extensions object", () => {
+                    expect(response.extensions).toEqual({
+                      context: {
+                        language: variables.language,
+                        country: variables.country,
+                      },
+                    });
+                  });
+
+                  it("contains a false hasNext flag", () => {
+                    expect(response.hasNext).toBe(false);
+                  });
+                });
+              });
+
+              describe("no extensions", () => {
+                const multipleResponsesArray = [
+                  `
+                    --graphql
+                    Content-Type: application/json
+                    Content-Length: 120\r\n\r\n{"data":{"shop":{"id":"${id}"}}, "hasNext":true}
+                    --graphql
+
+                    `,
+                  `
+                    Content-Type: application/json
+                    Content-Length: 77\r\n\r\n{"path":["shop"],"data":{"name":"${name}","description":"${description}"},"hasNext":false}
+
+                    --graphql--`,
+                ];
+
+                let results: any;
+                let responseStream: any;
+
+                beforeAll(async () => {
+                  const mockedSuccessResponse = responseGenerator(
+                    multipleResponsesArray
+                  );
+
+                  fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                  responseStream = await client.requestStream(operation, {
+                    variables,
+                  });
+
+                  results = [];
+
+                  for await (const response of responseStream) {
+                    results.push(response);
+                  }
+                });
+
+                afterAll(() => {
+                  jest.resetAllMocks();
+                });
+
+                describe("response objects returned by iterator", () => {
+                  describe("Initial response object", () => {
+                    it("does not contain the extensions object", () => {
+                      expect(results[0].extensions).toBeUndefined();
+                    });
+                  });
+
+                  describe("last response object", () => {
+                    it("does not contain the extensions object", () => {
+                      expect(results[1].extensions).toBeUndefined();
+                    });
+                  });
+                });
+              });
+
+              describe("errors while processing stream data", () => {
+                describe("unexpected or premature termination of stream data", () => {
+                  it("returns an async iterator that returns a response object with an incomplete data error when the stream ends prematurely", async () => {
+                    const multipleResponsesArray = [
+                      `
+                        --graphql
+                        Content-Type: application/json
+                        Content-Length: 120\r\n\r\n{"data":{"shop":{"id":"${id}"}},
+                        `,
+                    ];
+
+                    const mockedSuccessResponse = responseGenerator(
+                      multipleResponsesArray
+                    );
+
+                    fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                    const responseStream = await client.requestStream(
+                      operation,
+                      {
+                        variables,
+                      }
+                    );
+
+                    const results: any = [];
+
+                    for await (const response of responseStream) {
+                      results.push(response);
+                    }
+
+                    expect(results.slice(-1)[0].error).toEqual({
+                      networkStatusCode: 200,
+                      message:
+                        "GraphQL Client: Response stream terminated unexpectedly",
+                    });
+                  });
+
+                  it("returns an async iterator that returns a response object with an incomplete data error when the stream ends before all deferred chunks are returned", async () => {
+                    const multipleResponsesArray = [
+                      `
+                      --graphql
+                      Content-Type: application/json
+                      Content-Length: 120\r\n\r\n{"data":{"shop":{"id":"${id}"}},"extensions":{"context": {"country": "${variables.country}", "language": "${variables.language}"}},"hasNext":true}
+                      --graphql
+
+                      `,
+                    ];
+
+                    const mockedSuccessResponse = responseGenerator(
+                      multipleResponsesArray
+                    );
+
+                    fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                    const responseStream = await client.requestStream(
+                      operation,
+                      {
+                        variables,
+                      }
+                    );
+
+                    const results: any = [];
+
+                    for await (const response of responseStream) {
+                      results.push(response);
+                    }
+
+                    expect(results.slice(-1)[0].error).toEqual({
+                      networkStatusCode: 200,
+                      message:
+                        "GraphQL Client: Response stream terminated unexpectedly",
+                    });
+                  });
+                });
+
+                it("returns an async iterator that returns a response object with a JSON parsing error if the returned data is a malformed JSON", async () => {
+                  const multipleResponsesArray = [
+                    `
+                    --graphql
+                    Content-Type: application/json
+                    Content-Length: 120\r\n\r\n{"data":{"shop":{"id":"${id}"}}},"extensions":{"context": {"country": "${variables.country}", "language": "${variables.language}"}},"hasNext":false}
+                    --graphql--
+                    `,
+                  ];
+
+                  const mockedSuccessResponse = responseGenerator(
+                    multipleResponsesArray
+                  );
+
+                  fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                  const responseStream = await client.requestStream(operation, {
+                    variables,
+                  });
+
+                  const results: any = [];
+
+                  for await (const response of responseStream) {
+                    results.push(response);
+                  }
+
+                  const error = results.slice(-1)[0].error;
+                  expect(error.networkStatusCode).toBe(200);
+                  expect(error.message).toMatch(
+                    new RegExp(
+                      /^GraphQL Client: Error in parsing multipart response - /
+                    )
+                  );
+                });
+
+                it("returns an async iterator that returns a response object with a GQL error if the returned response payload contains an errors field with values", async () => {
+                  const errors = [
+                    {
+                      message: "Field 'test' doesn't exist on type 'Shop'",
+                      locations: [{ line: 5, column: 11 }],
+                      path: ["query shop", "shop", "test"],
+                      extensions: {
+                        code: "undefinedField",
+                        typeName: "Shop",
+                        fieldName: "test",
+                      },
+                    },
+                  ];
+
+                  const multipleResponsesArray = [
+                    `
+                    --graphql
+                    Content-Type: application/json
+                    Content-Length: 120\r\n\r\n{"errors":${JSON.stringify(
+                      errors
+                    )},"hasNext":false}
+                    --graphql--
+                    `,
+                  ];
+
+                  const mockedSuccessResponse = responseGenerator(
+                    multipleResponsesArray
+                  );
+
+                  fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                  const responseStream = await client.requestStream(operation, {
+                    variables,
+                  });
+
+                  const results: any = [];
+
+                  for await (const response of responseStream) {
+                    results.push(response);
+                  }
+
+                  expect(results.slice(-1)[0].error).toEqual({
+                    networkStatusCode: 200,
+                    message:
+                      "GraphQL Client: An error occurred while fetching from the API. Review 'graphQLErrors' for details.",
+                    graphQLErrors: errors,
+                  });
+                });
+
+                it("returns an async iterator that returns a response object with a no data returned error if the returned payload does not have an errors and data fields", async () => {
+                  const multipleResponsesArray = [
+                    `
+                    --graphql
+                    Content-Type: application/json
+                    Content-Length: 120\r\n\r\n{"extensions":{"context": {"country": "${variables.country}", "language": "${variables.language}"}},"hasNext":false}
+                    --graphql--
+                    `,
+                  ];
+
+                  const mockedSuccessResponse = responseGenerator(
+                    multipleResponsesArray
+                  );
+
+                  fetchMock.mockResolvedValue(mockedSuccessResponse);
+
+                  const responseStream = await client.requestStream(operation, {
+                    variables,
+                  });
+
+                  const results: any = [];
+
+                  for await (const response of responseStream) {
+                    results.push(response);
+                  }
+
+                  expect(results.slice(-1)[0].error).toEqual({
+                    networkStatusCode: 200,
+                    message:
+                      "GraphQL Client: API multipart response did not contain a data object",
+                  });
+                });
+              });
+            });
+          });
+        });
+
+        it("throws an error if the operation does not include the defer directive", async () => {
+          const customOperation = `
+            query {
+              shop {
+                name
+              }
+            }
+          `;
+
+          await expect(() =>
+            client.requestStream(customOperation)
+          ).rejects.toThrow(
+            new Error(
+              "GraphQL Client: This operation does not result in a streamable response - use request() instead."
+            )
+          );
         });
       });
     });
