@@ -78,3 +78,12 @@ export function buildCombinedDataObject(dataArray: any) {
     return combineObjects(acc, datum);
   }, {});
 }
+
+export function getKeyValueIfValid(key: string, value?: any) {
+  return value &&
+    (typeof value !== "object" ||
+      Array.isArray(value) ||
+      (typeof value === "object" && Object.keys(value).length > 0))
+    ? { [key]: value }
+    : {};
+}

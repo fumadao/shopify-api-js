@@ -6,6 +6,7 @@ import {
   validateRetries,
   buildCombinedDataObject,
   buildDataObjectByPath,
+  getKeyValueIfValid,
 } from "../utilities";
 
 describe("formatErrorMessage()", () => {
@@ -173,5 +174,56 @@ describe("buildCombinedDataObject()", () => {
         t2: [{ a1: "a1", b1: "b1" }, { a2: "a2" }],
       },
     });
+  });
+});
+
+describe("getKeyValueIfValid()", () => {
+  it("returns an object with the provided key and value if the provided value is a string", () => {
+    const key = "data";
+    const value = "test";
+
+    expect(getKeyValueIfValid(key, value)).toEqual({ [key]: value });
+  });
+
+  it("returns an object with the provided key and value if the provided value is a number", () => {
+    const key = "data";
+    const value = 3;
+
+    expect(getKeyValueIfValid(key, value)).toEqual({ [key]: value });
+  });
+
+  it("returns an object with the provided key and value if the provided value exists and is a non empty object", () => {
+    const key = "data";
+    const value = { name: "test" };
+
+    expect(getKeyValueIfValid(key, value)).toEqual({ [key]: value });
+  });
+
+  it("returns an object with the provided key and value if the provided value exists and is an array", () => {
+    const key = "data";
+    const value = ["test"];
+
+    expect(getKeyValueIfValid(key, value)).toEqual({ [key]: value });
+  });
+
+  it("returns an object with the provided key and value if the provided value exists and is an empty array", () => {
+    const key = "data";
+    const value = [];
+
+    expect(getKeyValueIfValid(key, value)).toEqual({ [key]: value });
+  });
+
+  it("returns an empty object if the provided object exists but is an empty object", () => {
+    const key = "data";
+    const value = {};
+
+    expect(getKeyValueIfValid(key, value)).toEqual({});
+  });
+
+  it("returns an empty object if the provided object is undefined", () => {
+    const key = "data";
+    const value = undefined;
+
+    expect(getKeyValueIfValid(key, value)).toEqual({});
   });
 });

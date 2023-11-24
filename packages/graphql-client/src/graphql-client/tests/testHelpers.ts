@@ -3,10 +3,41 @@ import { Readable } from "stream";
 
 import { ReadableStream } from "web-streams-polyfill/es2018";
 
+import { createGraphQLClient } from "../graphql-client";
+import { LogContentTypes, ClientOptions } from "../types";
+
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder as any;
 
-const responseConfig = {
+export const clientConfig = {
+  url: "http://test-store.myshopify.com/api/2023-10/graphql.json",
+  headers: {
+    "Content-Type": "application/json",
+    "X-Shopify-Storefront-Access-Token": "public-token",
+  },
+};
+
+export function getValidClient({
+  retries,
+  logger,
+}: {
+  retries?: number;
+  logger?: (logContent: LogContentTypes) => void;
+} = {}) {
+  const updatedConfig: ClientOptions = { ...clientConfig };
+
+  if (typeof retries === "number") {
+    updatedConfig.retries = retries;
+  }
+
+  if (logger !== undefined) {
+    updatedConfig.logger = logger;
+  }
+
+  return createGraphQLClient(updatedConfig);
+}
+
+const streamResponseConfig = {
   status: 200,
   ok: true,
   headers: new Headers({
@@ -49,7 +80,7 @@ export function createReaderStreamResponse(responseArray: string[]) {
   });
 
   return {
-    ...responseConfig,
+    ...streamResponseConfig,
     body: {
       getReader: () => stream.getReader(),
     },
@@ -59,5 +90,5 @@ export function createReaderStreamResponse(responseArray: string[]) {
 export function createIterableResponse(responseArray: string[]) {
   const stream = createReadableStream(responseArray);
 
-  return new Response(Readable.from(stream) as any, responseConfig);
+  return new Response(Readable.from(stream) as any, streamResponseConfig);
 }
