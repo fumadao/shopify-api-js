@@ -1,11 +1,7 @@
 import fetchMock from "jest-fetch-mock";
 
 import { createGraphQLClient } from "../graphql-client";
-import {
-  GraphQLClient,
-  RequestOptions,
-  ClientStreamResponseIteratorObject,
-} from "../types";
+import { GraphQLClient, RequestOptions, ClientStreamResponse } from "../types";
 
 import {
   clientConfig,
@@ -1570,7 +1566,7 @@ describe("GraphQL Client", () => {
                 });
 
                 describe("response objects returned by iterator", () => {
-                  let response: ClientStreamResponseIteratorObject;
+                  let response: ClientStreamResponse;
 
                   describe("Initial response object", () => {
                     beforeAll(() => {
@@ -1675,7 +1671,7 @@ describe("GraphQL Client", () => {
                 });
 
                 describe("single response object returned by iterator", () => {
-                  let response: ClientStreamResponseIteratorObject;
+                  let response: ClientStreamResponse;
 
                   beforeAll(() => {
                     response = results[0];

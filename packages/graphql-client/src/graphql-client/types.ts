@@ -33,15 +33,9 @@ export interface ClientResponse<TData = unknown> {
   extensions?: GQLExtensions;
 }
 
-export interface ClientStreamResponseIteratorObject<TData = unknown>
+export interface ClientStreamResponse<TData = unknown>
   extends ClientResponse<TData> {
   hasNext: boolean;
-}
-
-export interface ClientStreamResponse<TData = unknown> {
-  [Symbol.asyncIterator](): AsyncIterator<
-    ClientStreamResponseIteratorObject<TData>
-  >;
 }
 
 export interface LogContent {
@@ -104,5 +98,7 @@ export interface GraphQLClient {
   ) => Promise<ClientResponse<TData>>;
   requestStream: <TData = unknown>(
     ...props: RequestParams
-  ) => Promise<ClientStreamResponse<TData>>;
+  ) => Promise<{
+    [Symbol.asyncIterator](): AsyncIterator<ClientStreamResponse<TData>>;
+  }>;
 }
