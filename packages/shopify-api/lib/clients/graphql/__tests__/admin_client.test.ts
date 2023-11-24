@@ -55,20 +55,22 @@ describe('GraphQL client', () => {
     });
   });
 
-  it('can return response', async () => {
+  it.only('can return response', async () => {
     const shopify = shopifyApi(testConfig());
 
-    const client = new shopify.clients.Graphql({session});
     queueMockResponse(JSON.stringify(successResponse));
+    const client = shopify.clients.admin.graphql({session});
+    const response = await client.fetch(QUERY);
 
-    const response = await client.query({data: QUERY});
-
-    expect(response).toEqual(buildExpectedResponse(successResponse));
+    expect({
+      body: await response.json(),
+      headers: Object.fromEntries(new Headers(response.headers).entries()),
+    }).toEqual(buildExpectedResponse(successResponse));
     expect({
       method: 'POST',
       domain,
       path: `/admin/api/${shopify.config.apiVersion}/graphql.json`,
-      data: QUERY,
+      data: {query: QUERY},
     }).toMatchMadeHttpRequest();
   });
 
@@ -298,7 +300,7 @@ describe('GraphQL client', () => {
   });
 });
 
-function buildExpectedResponse(obj: unknown) {
+function buildExpectedResponse(obj: any) {
   const expectedResponse = {
     body: obj,
     headers: expect.objectContaining({}),

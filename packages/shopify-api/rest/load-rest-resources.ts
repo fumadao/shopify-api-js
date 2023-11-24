@@ -1,29 +1,33 @@
-import type {ShopifyClients} from '../lib';
+import type {Shopify, ShopifyLegacyClients} from '../lib';
 import {ConfigInterface} from '../lib/base-types';
 import {logger} from '../lib/logger';
 
 import {Base} from './base';
 import {ShopifyRestResources} from './types';
 
-export interface LoadRestResourcesParams<
+export function loadRestResources<
+  TShopify extends Shopify,
   Resources extends ShopifyRestResources,
-> {
-  resources: Resources;
-  config: ConfigInterface;
-  RestClient: ShopifyClients['Rest'];
-}
+>(shopify: TShopify, resources: Resources): Resources {
+  const {config} = shopify;
 
-export function loadRestResources<Resources extends ShopifyRestResources>({
-  resources,
-  config,
-  RestClient,
-}: LoadRestResourcesParams<Resources>): Resources {
   const firstResource = Object.keys(resources)[0];
   if (config.apiVersion !== resources[firstResource].apiVersion) {
     logger(config).warning(
       `Loading REST resources for API version ${resources[firstResource].apiVersion}, which doesn't match the default ${config.apiVersion}`,
     );
   }
+
+  function isUsingNewClients(
+    _clients: TShopify['clients'],
+    config: ConfigInterface,
+  ): _clients is ShopifyLegacyClients {
+    return config.future?.unstable_graphqlClients ?? false;
+  }
+
+  const client = isUsingNewClients(shopify.clients, config)
+    ? shopify.clients
+    : shopify.clients.admin;
 
   return Object.fromEntries(
     Object.entries(resources).map(([name, resource]) => {

@@ -72,22 +72,6 @@ export async function nodeConvertAndSetHeaders(
   );
 }
 
-export async function nodeFetch({
-  url,
-  method,
-  headers = {},
-  body,
-}: NormalizedRequest): Promise<NormalizedResponse> {
-  const resp = await fetch(url, {method, headers: flatHeaders(headers), body});
-  const respBody = await resp.text();
-  return {
-    statusCode: resp.status,
-    statusText: resp.statusText,
-    body: respBody,
-    headers: canonicalizeHeaders(Object.fromEntries(resp.headers.entries())),
-  };
-}
-
 export function nodeRuntimeString() {
   return `Node ${process.version}`;
 }

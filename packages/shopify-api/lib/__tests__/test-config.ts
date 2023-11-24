@@ -18,6 +18,10 @@ type TestConfig<Overrides extends Partial<ConfigParams>> = ConfigParams &
         Overrides,
         'unstable_tokenExchange'
       >;
+      unstable_graphqlClients: DefaultedFutureFlag<
+        Overrides,
+        'unstable_graphqlClients'
+      >;
     };
   };
 
@@ -45,6 +49,7 @@ export function testConfig<Overrides extends Partial<ConfigParams>>(
     },
     future: {
       unstable_tokenExchange: true,
+      unstable_graphqlClients: true,
       ...(overrides.future as Overrides['future']),
     },
   };

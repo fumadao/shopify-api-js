@@ -70,6 +70,7 @@
     "node-fetch": "^2.6.7"
   },
   "dependencies": {
+    "@shopify/graphql-client": "^0.7.0",
     "@shopify/network": "^3.2.1",
     "compare-versions": "^5.0.3",
     "isbot": "^3.6.10",

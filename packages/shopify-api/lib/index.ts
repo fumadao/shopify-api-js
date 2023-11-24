@@ -36,7 +36,7 @@ export interface Shopify<
   Config extends ConfigInterface<Params> = ConfigInterface<Params>,
 > {
   config: Config;
-  clients: ShopifyClients;
+  clients: ShopifyClients<Params['future']>;
   auth: ShopifyAuth<Params['future']>;
   session: ShopifySession;
   utils: ShopifyUtils;
@@ -68,11 +68,7 @@ export function shopifyApi<
   };
 
   if (restResources) {
-    shopify.rest = loadRestResources<Resources>({
-      resources: restResources as Resources,
-      config: validatedConfig,
-      RestClient: shopify.clients.Rest,
-    });
+    shopify.rest = loadRestResources<Params, Resources>(shopify, restResources);
   }
 
   shopify.logger
